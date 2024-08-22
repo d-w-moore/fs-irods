@@ -19,7 +19,8 @@ from irods.data_object import iRODSDataObject
 from fs_irods.utils import can_create
 
 import weakref
-files = weakref.WeakKeyDictionary()
+fses= weakref.WeakKeyDictionary()
+weakrefs = weakref.WeakKeyDictionary()
 
 _utc=datetime.timezone(datetime.timedelta(0))
 
@@ -30,7 +31,9 @@ class iRODSFS(FS):
         self._host = session.host
         self._port = session.port
         self._zone = session.zone
+        fses[self] = 1
 
+        self.files = weakref.WeakKeyDictionary()
         self._session = session
 
     def wrap(self, path: str) -> str:
@@ -139,9 +142,7 @@ class iRODSFS(FS):
         if not self.exists(path):
             if not create:
                 raise ResourceNotFound(path)
-            self.create(path)
-
-        self._check_isfile(path)
+########    self.create(path) # DWM - after data_objects.open , path is guaranteed to exist
 
         with self._lock:
             mode = mode.replace("b", "")
@@ -150,13 +151,32 @@ class iRODSFS(FS):
                 mode,
                 create,
                 allow_redirect=False,
+                _buffering = buffering,
+                #auto_close = False,
                 **options
             )
-            if 'a' in mode:
-                file.seek(0, io.SEEK_END)
-            files[file] = 1
+            self._check_isfile(path)
             return file
     
+    def do_finalize(self):
+        print('finalingg dwm')
+        self.descs_finalized = 1
+
+        for desc in self.files:
+            print ('raw=',getattr(desc,'raw',None))
+            if not desc.closed:
+                desc.flush()
+                desc.close()
+
+    def __del__(self):
+        if not getattr(self, 'descs_finalized', None):
+            self.do_finalize()
+
+    def open(self,*a,**kw):
+        f = super().open(*a,**kw)
+        self.files[f] = 1
+        return f
+
     def remove(self, path: str):
         """Remove a file from the filesystem.
         Args:
@@ -390,7 +410,7 @@ class iRODSFS(FS):
                 self._session.data_objects.put(
                     file,
                     self.wrap(path),
-                    allow_redirect=False,
+                    #allow_redirect=False,
                 )
         else:
             raise NotImplementedError()
@@ -430,7 +450,7 @@ class iRODSFS(FS):
                 self._session.data_objects.get(
                     self.wrap(path),
                     file,
-                    allow_redirect=False,
+                    #allow_redirect=False,
                 )
         else:
             raise NotImplementedError()
