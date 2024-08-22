@@ -18,6 +18,9 @@ from irods.data_object import iRODSDataObject
 
 from fs_irods.utils import can_create
 
+import weakref
+files = weakref.WeakKeyDictionary()
+
 _utc=datetime.timezone(datetime.timedelta(0))
 
 class iRODSFS(FS):
@@ -147,11 +150,11 @@ class iRODSFS(FS):
                 mode,
                 create,
                 allow_redirect=False,
-                auto_close=False,
                 **options
             )
             if 'a' in mode:
                 file.seek(0, io.SEEK_END)
+            files[file] = 1
             return file
     
     def remove(self, path: str):
@@ -388,7 +391,6 @@ class iRODSFS(FS):
                     file,
                     self.wrap(path),
                     allow_redirect=False,
-                    auto_close=False
                 )
         else:
             raise NotImplementedError()
@@ -429,7 +431,6 @@ class iRODSFS(FS):
                     self.wrap(path),
                     file,
                     allow_redirect=False,
-                    auto_close=False
                 )
         else:
             raise NotImplementedError()
