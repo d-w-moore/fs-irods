@@ -4,8 +4,6 @@ import fs
 from fs.opener import Opener
 from fs.opener.registry import registry
 
-from . import iRODSFS
-
 @registry.install
 class iRODSOpener(Opener):
 
@@ -17,5 +15,6 @@ class iRODSOpener(Opener):
         
         # TODO - We can use parse_result.resource to determine the root_path parameter value
         #        in the iRODSFS constructor, once an issue 16 fix is merged.
+        from . import iRODSFS
         return iRODSFS(helpers.make_session(), root_path = parse_result.resource)
         
