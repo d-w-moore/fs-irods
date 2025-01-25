@@ -160,7 +160,7 @@ class iRODSFS(FS):
     # Store weak references to open file handles that maintain a hard reference to the iRODSFS object.
     # In this way, the iRODSFS can only be destructed once these file handles are gone.
     def open(self, *args, **options):
-        options['line_buffering'] = (options['buffering'] == 1)
+        options['line_buffering'] = (options.get('buffering') == 1)
         fd = super().open(*args,**options)
         self.files[fd] = self
         return fd
